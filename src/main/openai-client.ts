@@ -1,10 +1,10 @@
 /**
  * Server-side OpenAI Responses API helper for Electron's main process.
  *
- * Security rules:
- * - Never import this from renderer/browser code.
- * - Keep OPENAI_API_KEY in the process environment; never commit it.
- * - This helper only sends a model request. It does not execute tools or shell commands.
+ * Security:
+ * - Import this only from main-process code.
+ * - Never expose OPENAI_API_KEY to a renderer, webview, or browser.
+ * - This helper returns text only; it does not execute model-suggested actions.
  */
 type OpenAIResponse = {
   output_text?: string;
@@ -29,13 +29,19 @@ export async function askOpenAI(
     throw new Error("OPENAI_API_KEY is not configured for the Electron main process.");
   }
 
+  const model = (options.model || process.env.OPENAI_MODEL || "").trim();
+  if (!model) {
+    throw new Error(
+      "OPENAI_MODEL is not configured. Set it to a model available to your OpenAI Platform project.",
+    );
+  }
+
   const trimmedInput = input.trim();
   if (!trimmedInput) throw new Error("Input cannot be empty.");
   if (trimmedInput.length > 40_000) {
     throw new Error("Input is too long (maximum 40,000 characters).");
   }
 
-  const model = options.model || process.env.OPENAI_MODEL || "gpt-6-luna";
   const timeoutMs = Math.min(Math.max(options.timeoutMs ?? 45_000, 1_000), 120_000);
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -52,14 +58,17 @@ export async function askOpenAI(
   });
 
   if (!response.ok) {
-    // Avoid echoing request headers or the API key into logs/errors.
-    const safeBody = (await response.text()).slice(0, 500);
-    throw new Error(`OpenAI request failed (HTTP ${response.status}): ${safeBody}`);
+    // Do not include provider response bodies in logs; keep errors non-sensitive.
+    throw new Error(`OpenAI request failed with HTTP ${response.status}.`);
   }
 
   const data = (await response.json()) as OpenAIResponse;
-  if (data.error?.message) throw new Error(data.error.message);
-  if (typeof data.output_text === "string") return data.output_text;
+  if (data.error?.message) {
+    throw new Error("OpenAI returned an API error. Check model access and Platform settings.");
+  }
+  if (typeof data.output_text === "string" && data.output_text.trim()) {
+    return data.output_text.trim();
+  }
 
   const text = (data.output ?? [])
     .flatMap((item) => item.content ?? [])
