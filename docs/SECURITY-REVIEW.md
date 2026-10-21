@@ -25,7 +25,7 @@ Migration sequence:
 
 - Validate types, lengths, and allowed values for every IPC message.
 - Replace synchronous IPC where practical; it can freeze the renderer.
-- Review the `store.reset()` call before release. It may reset persistent user preferences at startup; remove only after checking local behavior and backups.
+- The feature branch removes the startup `store.reset()` call because it erased persistent preferences at every launch. Verify settings still load correctly on Windows before merging.
 - Add tests for settings validation, malformed IPC payloads, unknown task types, and approval transitions.
 
 ## Priority 3 — automation policy
