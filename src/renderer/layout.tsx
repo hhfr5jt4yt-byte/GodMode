@@ -41,8 +41,8 @@ export default function Layout() {
 		window.electron.browserWindow.setAlwaysOnTop(!newstate);
 	};
 
-	const enabledProviders = paneList.map(
-		(x) => allProviders.find((y) => y.webviewId === (x.webviewId || x.id))!,
+	const enabledProviders = paneList.map((x) =>
+		allProviders.find((y) => y.webviewId === (x.webviewId || x.id))!,
 	);
 
 	const [sizes, setSizes] = React.useState(updateSplitSizes(enabledProviders));

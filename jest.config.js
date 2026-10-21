@@ -1,7 +1,7 @@
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  testMatch: ['<rootDir>/src/**/*.test.ts'],
-  clearMocks: true,
-  restoreMocks: true,
+	preset: 'ts-jest',
+	testEnvironment: 'node',
+	testMatch: ['<rootDir>/src/**/*.test.ts'],
+	clearMocks: true,
+	restoreMocks: true,
 };

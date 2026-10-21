@@ -81,7 +81,6 @@ contextBridge.exposeInMainWorld('settings', {
 
 export type ElectronHandler = typeof electronHandler;
 
-
 // Narrow Jarvis API: renderer code receives named operations only, never ipcRenderer.
 contextBridge.exposeInMainWorld('jarvis', {
 	getStatus: () => ipcRenderer.invoke('jarvis:status'),
@@ -94,5 +93,6 @@ contextBridge.exposeInMainWorld('jarvis', {
 	}) => ipcRenderer.invoke('jarvis:tasks:create', input),
 	approveTask: (id: string) => ipcRenderer.invoke('jarvis:tasks:approve', id),
 	rejectTask: (id: string) => ipcRenderer.invoke('jarvis:tasks:reject', id),
-	askOpenAI: (prompt: string) => ipcRenderer.invoke('jarvis:openai:ask', prompt),
+	askOpenAI: (prompt: string) =>
+		ipcRenderer.invoke('jarvis:openai:ask', prompt),
 });

@@ -68,10 +68,12 @@ function getJarvisServices() {
 	// app.getPath('userData') is private to this machine; do not store this data
 	// in the repository or in a synced/public project directory.
 	const dataDirectory = path.join(app.getPath('userData'), 'jarvis-core');
-	if (!jarvisTaskRegistry) jarvisTaskRegistry = new JarvisTaskRegistry(dataDirectory);
+	if (!jarvisTaskRegistry)
+		jarvisTaskRegistry = new JarvisTaskRegistry(dataDirectory);
 	if (!jarvisAgentRegistry) jarvisAgentRegistry = new JarvisAgentRegistry();
 	if (!jarvisAuditLog) jarvisAuditLog = new JarvisAuditLog(dataDirectory);
-	if (!jarvisModelGateway) jarvisModelGateway = new JarvisModelGateway(jarvisAuditLog);
+	if (!jarvisModelGateway)
+		jarvisModelGateway = new JarvisModelGateway(jarvisAuditLog);
 	return {
 		tasks: jarvisTaskRegistry,
 		agents: jarvisAgentRegistry,
@@ -88,7 +90,9 @@ ipcMain.handle('jarvis:status', (event) => {
 	const services = getJarvisServices();
 	return {
 		ready: true,
-		modelConfigured: Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL),
+		modelConfigured: Boolean(
+			process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL,
+		),
 		taskCount: services.tasks.list(500).length,
 	};
 });
@@ -100,7 +104,8 @@ ipcMain.handle('jarvis:agents:list', (event) => {
 
 ipcMain.handle('jarvis:tasks:list', (event, limit: unknown) => {
 	assertJarvisMainFrame(event);
-	const safeLimit = typeof limit === 'number' && Number.isFinite(limit) ? limit : 100;
+	const safeLimit =
+		typeof limit === 'number' && Number.isFinite(limit) ? limit : 100;
 	return getJarvisServices().tasks.list(safeLimit);
 });
 
@@ -109,13 +114,22 @@ ipcMain.handle('jarvis:tasks:create', (event, input: unknown) => {
 	if (!input || typeof input !== 'object' || Array.isArray(input)) {
 		throw new Error('Invalid task payload.');
 	}
-	const candidate = input as { type?: unknown; title?: unknown; payload?: unknown };
-	if (typeof candidate.type !== 'string' || typeof candidate.title !== 'string') {
+	const candidate = input as {
+		type?: unknown;
+		title?: unknown;
+		payload?: unknown;
+	};
+	if (
+		typeof candidate.type !== 'string' ||
+		typeof candidate.title !== 'string'
+	) {
 		throw new Error('Task type and title are required.');
 	}
 	if (
 		candidate.payload !== undefined &&
-		(!candidate.payload || typeof candidate.payload !== 'object' || Array.isArray(candidate.payload))
+		(!candidate.payload ||
+			typeof candidate.payload !== 'object' ||
+			Array.isArray(candidate.payload))
 	) {
 		throw new Error('Task payload must be a JSON object.');
 	}
@@ -128,13 +142,15 @@ ipcMain.handle('jarvis:tasks:create', (event, input: unknown) => {
 
 ipcMain.handle('jarvis:tasks:approve', (event, id: unknown) => {
 	assertJarvisMainFrame(event);
-	if (typeof id !== 'string' || id.length > 80) throw new Error('Invalid task ID.');
+	if (typeof id !== 'string' || id.length > 80)
+		throw new Error('Invalid task ID.');
 	return getJarvisServices().tasks.approve(id);
 });
 
 ipcMain.handle('jarvis:tasks:reject', (event, id: unknown) => {
 	assertJarvisMainFrame(event);
-	if (typeof id !== 'string' || id.length > 80) throw new Error('Invalid task ID.');
+	if (typeof id !== 'string' || id.length > 80)
+		throw new Error('Invalid task ID.');
 	return getJarvisServices().tasks.reject(id);
 });
 
@@ -144,14 +160,21 @@ let jarvisModelRequestInFlight = false;
 ipcMain.handle('jarvis:openai:ask', async (event, prompt: unknown) => {
 	assertJarvisMainFrame(event);
 	if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > 40_000) {
-		throw new Error('Prompt must be a non-empty string of at most 40,000 characters.');
+		throw new Error(
+			'Prompt must be a non-empty string of at most 40,000 characters.',
+		);
 	}
 	const now = Date.now();
-	while (jarvisModelRequestTimes.length && jarvisModelRequestTimes[0] <= now - 60_000) {
+	while (
+		jarvisModelRequestTimes.length &&
+		jarvisModelRequestTimes[0] <= now - 60_000
+	) {
 		jarvisModelRequestTimes.shift();
 	}
 	if (jarvisModelRequestTimes.length >= 10) {
-		throw new Error('Jarvis model rate limit reached. Wait a minute before trying again.');
+		throw new Error(
+			'Jarvis model rate limit reached. Wait a minute before trying again.',
+		);
 	}
 	if (jarvisModelRequestInFlight) {
 		throw new Error('Jarvis is already processing a model request.');

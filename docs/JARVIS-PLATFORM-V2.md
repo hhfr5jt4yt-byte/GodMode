@@ -53,18 +53,23 @@ No task execution worker is enabled
 ## Rollout
 
 ### Phase 1: foundations and IPC
+
 The main-process bridge, task registry, audit logger, model gateway, and first panel are now present on this feature branch. Validate them in CI and on Windows before merging.
 
 ### Phase 2: CEO dashboard
+
 Improve navigation, task detail views, system health, and error reporting. Keep existing provider chat available and avoid replacing it wholesale.
 
 ### Phase 3: read-only adapters
+
 Add read-only workspace indexing and public research with source tracking, exclusions, size limits, and cancellation. Do not permit arbitrary file paths or shell execution from model output.
 
 ### Phase 4: controlled automation
+
 Add individually tested workers only for narrow, reversible tasks. Keep publishing, deployment, messaging, credential changes, deletion, and financial actions disabled unless each has a reviewed approval flow.
 
 ### Phase 5: remote/phone access
+
 Treat remote access as a separate security project: authenticated device enrollment, short-lived sessions, revocation, encrypted transport, rate limits, and explicit permissions.
 
 ## Validation status

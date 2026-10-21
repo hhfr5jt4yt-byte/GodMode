@@ -14,6 +14,7 @@ This is a prioritized review plan based on the current repository snapshot. It i
 The repository snapshot's `src/main/main.ts` creates a BrowserWindow with `nodeIntegration: true` and `webviewTag: true`. Because this app embeds third-party provider pages, treat this as a high-priority risk. Do not simply flip these settings without a migration plan: renderer and provider integration may depend on them.
 
 Migration sequence:
+
 1. Inventory every use of `window.electron`, webview tags, preload APIs, and provider scripts.
 2. Move the app renderer to `nodeIntegration: false`, `contextIsolation: true`, and `sandbox: true` where compatible.
 3. Expose narrow, typed APIs through preload; do not expose generic IPC senders or arbitrary channel names.
