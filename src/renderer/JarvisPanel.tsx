@@ -174,6 +174,11 @@ export default function JarvisPanel({
                   Refresh status
                 </button>
               </div>
+              {!status?.modelConfigured && (
+                <p className="mt-3 rounded-lg border border-amber-900/70 bg-amber-950/30 p-3 text-sm text-amber-200">
+                  OpenAI is not configured. Set OPENAI_API_KEY and OPENAI_MODEL in the PowerShell session that launches GodMode, then restart the app. Never put the key in this panel or in source code.
+                </p>
+              )}
               {answer && <pre className="mt-4 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-cyan-950 bg-black/40 p-4 text-sm leading-6">{answer}</pre>}
             </div>
 
