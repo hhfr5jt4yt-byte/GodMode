@@ -138,12 +138,31 @@ ipcMain.handle('jarvis:tasks:reject', (event, id: unknown) => {
 	return getJarvisServices().tasks.reject(id);
 });
 
+const jarvisModelRequestTimes: number[] = [];
+let jarvisModelRequestInFlight = false;
+
 ipcMain.handle('jarvis:openai:ask', async (event, prompt: unknown) => {
 	assertJarvisMainFrame(event);
 	if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > 40_000) {
 		throw new Error('Prompt must be a non-empty string of at most 40,000 characters.');
 	}
-	return getJarvisServices().model.complete(prompt);
+	const now = Date.now();
+	while (jarvisModelRequestTimes.length && jarvisModelRequestTimes[0] <= now - 60_000) {
+		jarvisModelRequestTimes.shift();
+	}
+	if (jarvisModelRequestTimes.length >= 10) {
+		throw new Error('Jarvis model rate limit reached. Wait a minute before trying again.');
+	}
+	if (jarvisModelRequestInFlight) {
+		throw new Error('Jarvis is already processing a model request.');
+	}
+	jarvisModelRequestTimes.push(now);
+	jarvisModelRequestInFlight = true;
+	try {
+		return await getJarvisServices().model.complete(prompt);
+	} finally {
+		jarvisModelRequestInFlight = false;
+	}
 });
 
 ipcMain.on('ipc-example', async (event, arg) => {
