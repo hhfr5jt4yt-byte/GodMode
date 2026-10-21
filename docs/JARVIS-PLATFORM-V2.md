@@ -2,67 +2,71 @@
 
 ## Purpose
 
-This layer is intended to grow GodMode into a single command center while keeping the existing provider-chat UI intact. The files here are modular foundations, not yet wired into the running Electron application.
+This branch adds an initial Jarvis panel to the existing GodMode renderer and connects it to a small set of main-process services. It is an integration prototype, not yet a production-ready autonomous system.
 
 ## Components
 
-- `openai-client.ts`: makes a text-only request to the OpenAI Responses API from the main process. It has no tools and never executes model output.
-- `jarvis-model-gateway.ts`: adds correlation IDs and redacted lifecycle audit events around model calls.
-- `jarvis-agent-registry.ts`: defines the allowed capabilities of built-in agent roles. An agent definition is not an executable process.
-- `jarvis-task-registry.ts`: stores task metadata and task state. It does not execute tasks.
-- `jarvis-audit-log.ts`: writes structured, redacted audit events without prompts or credential material.
-- `SECURITY-REVIEW.md`: phased Electron hardening plan.
+- `openai-client.ts`: text-only requests through the OpenAI Responses API. It has no tools and never executes model output.
+- `jarvis-model-gateway.ts`: correlation IDs and redacted model lifecycle events.
+- `jarvis-agent-registry.ts`: capability descriptions for built-in agent roles; these are not independent running agents.
+- `jarvis-task-registry.ts`: persistent task records and approval state transitions; no task worker is enabled.
+- `jarvis-audit-log.ts`: structured, redacted audit events.
+- `main.ts`: narrow IPC handlers, main-frame identity checks, and per-process model request rate limiting.
+- `preload.ts` and `global.d.ts`: named renderer API and its TypeScript contract.
+- `renderer/JarvisPanel.tsx`: first dashboard panel for OpenAI prompts, agent roles, task creation, and approvals.
 
-## Proposed control flow
+## Control flow
 
 ```text
-GodMode renderer
+GodMode renderer / Jarvis panel
     |
-    | narrow, typed preload API
+    | named methods only through preload bridge
     v
-Electron IPC validation
+Electron IPC main-frame check + payload validation
     |
     v
-Jarvis orchestrator
-    |-- agent capability registry
-    |-- task registry + approval queue
-    |-- model gateway --> OpenAI Responses API
+Jarvis services
+    |-- capability catalog
+    |-- persistent task queue + approval states
+    |-- audited model gateway --> OpenAI Responses API
     |-- redacted audit log
     |
     v
-future task adapters (allowlisted, individually tested)
+No task execution worker is enabled
 ```
 
 ## Required invariants
 
-1. No API key in renderer, browser storage, or public GitHub.
-2. No generic IPC endpoint that lets a renderer call arbitrary Node APIs.
-3. No model-generated shell commands, scripts, URLs, or file operations are executed automatically.
-4. The model can propose plans; deterministic application code enforces permissions.
-5. Routine tasks must have narrow schemas, resource limits, cancellation, and a timeout.
-6. Consequential actions require a fresh, explicit approval at the point of execution. Approval must include a summary of the exact action and target.
+1. No API key in renderer code, browser storage, logs, or public GitHub.
+2. No new generic IPC endpoint that lets the renderer call arbitrary Node APIs.
+3. No model-generated shell commands, scripts, URLs, or file operations execute automatically.
+4. Model output is untrusted content; deterministic application code must enforce permissions.
+5. Routine tasks require narrow schemas, resource limits, cancellation, and timeouts before a worker is added.
+6. Consequential actions need fresh approval for the exact target and operation at execution time.
 7. Audit logs must not contain prompts, tokens, personal data, or raw provider errors.
-8. A worker must re-check permissions after restart; a persisted approval alone must not authorize a stale or changed action.
-9. Do not enable remote phone access until authentication, device enrollment, rate limiting, TLS, and revocation are designed and tested.
-10. Do not merge or ship until the local Windows working tree has been reviewed and builds/tests pass.
+8. A persisted approval must not authorize stale or modified actions after restart.
+9. Do not enable phone/remote access until authentication, device enrollment, rate limiting, TLS, and revocation are designed and tested.
+10. Existing legacy renderer settings (`nodeIntegration: true`, embedded webviews) remain a security risk and require a separate compatibility-tested migration.
+11. Keep user settings and local task data outside the repository; never reset persistent settings on every startup.
+12. Do not merge or ship until build, lint, tests, and manual Windows regression checks pass.
 
 ## Rollout
 
-### Phase 1: foundations
-Review the OpenAI client, task registry, agent catalog, audit logger, and CI checks. Fix lint/build/test failures.
+### Phase 1: foundations and IPC
+The main-process bridge, task registry, audit logger, model gateway, and first panel are now present on this feature branch. Validate them in CI and on Windows before merging.
 
-### Phase 2: main-process integration
-Create a narrowly typed IPC API for status, agent list, task list/create/approve/reject, and model requests. Validate the sender frame and every payload. Do not expose file-system or shell methods.
+### Phase 2: CEO dashboard
+Improve navigation, task detail views, system health, and error reporting. Keep existing provider chat available and avoid replacing it wholesale.
 
-### Phase 3: CEO dashboard
-Add a small dashboard for system health, agent capabilities, queued tasks, approvals, and audit history. Keep business modules separate and show errors honestly.
+### Phase 3: read-only adapters
+Add read-only workspace indexing and public research with source tracking, exclusions, size limits, and cancellation. Do not permit arbitrary file paths or shell execution from model output.
 
-### Phase 4: read-only adapters
-Add read-only workspace indexing and public research with source tracking, size limits, exclusions, and cancellation.
+### Phase 4: controlled automation
+Add individually tested workers only for narrow, reversible tasks. Keep publishing, deployment, messaging, credential changes, deletion, and financial actions disabled unless each has a reviewed approval flow.
 
-### Phase 5: controlled automation
-Only after tests, add individual task workers. Start with harmless reversible tasks. Keep publish, deployment, messaging, credential changes, deletion, and financial actions disabled unless each has a reviewed approval flow.
+### Phase 5: remote/phone access
+Treat remote access as a separate security project: authenticated device enrollment, short-lived sessions, revocation, encrypted transport, rate limits, and explicit permissions.
 
 ## Validation status
 
-GitHub edits are committed on `feature/jarvis-platform-v2`. They have not been built or run on the user's Windows machine. Do not describe this as deployed or fully integrated.
+Changes are on `feature/jarvis-platform-v2` and have not been built or run on the user's local Windows installation. Do not describe the branch as deployed or verified until CI and local checks pass.
