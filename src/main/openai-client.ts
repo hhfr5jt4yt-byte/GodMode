@@ -36,13 +36,15 @@ export async function askOpenAI(
     );
   }
 
+  if (typeof input !== "string") throw new Error("Input must be a string.");
   const trimmedInput = input.trim();
   if (!trimmedInput) throw new Error("Input cannot be empty.");
   if (trimmedInput.length > 40_000) {
     throw new Error("Input is too long (maximum 40,000 characters).");
   }
 
-  const timeoutMs = Math.min(Math.max(options.timeoutMs ?? 45_000, 1_000), 120_000);
+  const requestedTimeout = Number.isFinite(options.timeoutMs) ? options.timeoutMs! : 45_000;
+  const timeoutMs = Math.min(Math.max(requestedTimeout, 1_000), 120_000);
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
