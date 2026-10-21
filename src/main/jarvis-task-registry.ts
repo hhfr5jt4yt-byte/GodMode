@@ -1,8 +1,8 @@
 /**
  * Jarvis task registry: records work and gates consequential actions.
  *
- * This module deliberately does NOT execute tasks. A future worker should
- * consume only explicitly allowlisted routine task types and re-check approval
+ * This module deliberately does NOT execute tasks. A future worker must consume
+ * only explicitly allowlisted routine task types and re-check authorization
  * immediately before any consequential side effect.
  */
 import { randomUUID } from "crypto";
@@ -56,12 +56,25 @@ const TASK_TYPES = new Set<JarvisTaskType>([
   "money_movement",
 ]);
 
+const TASK_STATUSES = new Set<JarvisTaskStatus>([
+  "queued",
+  "awaiting_approval",
+  "approved_not_executed",
+  "rejected",
+  "completed",
+  "failed",
+]);
+
 const MAX_TITLE = 160;
 const MAX_PAYLOAD_BYTES = 32_000;
 
 function safeJsonBytes(value: unknown): number {
   try {
-    return Buffer.byteLength(JSON.stringify(value), "utf8");
+    const serialized = JSON.stringify(value);
+    if (typeof serialized !== "string") {
+      throw new Error("Task payload must be JSON-serializable.");
+    }
+    return Buffer.byteLength(serialized, "utf8");
   } catch {
     throw new Error("Task payload must be JSON-serializable.");
   }
@@ -74,12 +87,16 @@ export class JarvisTaskRegistry {
     private readonly dataDirectory: string,
     private readonly maxTasks = 2_000,
   ) {
+    if (!Number.isInteger(maxTasks) || maxTasks < 1) {
+      throw new Error("maxTasks must be a positive integer.");
+    }
     fs.mkdirSync(dataDirectory, { recursive: true });
     this.load();
   }
 
   list(limit = 100): JarvisTask[] {
-    const boundedLimit = Math.max(1, Math.min(Math.floor(limit), 500));
+    const requested = Number.isFinite(limit) ? Math.floor(limit) : 100;
+    const boundedLimit = Math.max(1, Math.min(requested, 500));
     return [...this.tasks.values()]
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, boundedLimit)
@@ -96,7 +113,7 @@ export class JarvisTaskRegistry {
     title: string;
     payload?: Record<string, unknown>;
   }): JarvisTask {
-    if (!TASK_TYPES.has(input.type)) throw new Error("Unsupported task type.");
+    if (!input || !TASK_TYPES.has(input.type)) throw new Error("Unsupported task type.");
     if (typeof input.title !== "string" || !input.title.trim()) {
       throw new Error("Task title is required.");
     }
@@ -158,8 +175,10 @@ export class JarvisTaskRegistry {
 
   private requireTask(id: string): JarvisTask {
     const task = this.tasks.get(id);
-    if (!task) throw new Error("Task not found.");
-    return task;
+    if (typeof id !== "string" || !id) throw new Error("Task ID is required.");
+    const taskValue = this.tasks.get(id);
+    if (!taskValue) throw new Error("Task not found.");
+    return taskValue;
   }
 
   private get tasksFile(): string {
@@ -172,7 +191,12 @@ export class JarvisTaskRegistry {
 
   private load(): void {
     if (!fs.existsSync(this.tasksFile)) return;
-    const parsed: unknown = JSON.parse(fs.readFileSync(this.tasksFile, "utf8"));
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(fs.readFileSync(this.tasksFile, "utf8"));
+    } catch {
+      throw new Error("Task registry file is invalid JSON; preserve it and inspect before recovery.");
+    }
     if (!Array.isArray(parsed)) throw new Error("Invalid task registry file.");
     for (const item of parsed) {
       if (
@@ -180,10 +204,14 @@ export class JarvisTaskRegistry {
         typeof item.id === "string" &&
         TASK_TYPES.has(item.type) &&
         typeof item.title === "string" &&
-        typeof item.status === "string" &&
+        TASK_STATUSES.has(item.status) &&
         item.payload &&
-        typeof item.payload === "object"
+        typeof item.payload === "object" &&
+        !Array.isArray(item.payload) &&
+        typeof item.createdAt === "string" &&
+        typeof item.updatedAt === "string"
       ) {
+        if (this.tasks.size >= this.maxTasks) break;
         this.tasks.set(item.id, item as JarvisTask);
       }
     }
