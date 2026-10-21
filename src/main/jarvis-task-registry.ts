@@ -174,11 +174,10 @@ export class JarvisTaskRegistry {
   }
 
   private requireTask(id: string): JarvisTask {
-    const task = this.tasks.get(id);
     if (typeof id !== "string" || !id) throw new Error("Task ID is required.");
-    const taskValue = this.tasks.get(id);
-    if (!taskValue) throw new Error("Task not found.");
-    return taskValue;
+    const task = this.tasks.get(id);
+    if (!task) throw new Error("Task not found.");
+    return task;
   }
 
   private get tasksFile(): string {
