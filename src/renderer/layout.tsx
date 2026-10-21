@@ -12,6 +12,7 @@ import { BrowserPane } from './browserPane';
 import { ProviderInterface } from 'lib/types';
 import { TitleBar } from './TitleBar';
 import SettingsMenu from './components/settings';
+import JarvisPanel from './JarvisPanel';
 
 // @ts-ignore
 export type paneInfo = { webviewId: string; shortName: string };
@@ -30,6 +31,7 @@ export default function Layout() {
 	const [superprompt, setSuperprompt] = React.useState('');
 	const [paneList, setPaneList] = React.useState(storedPaneList);
 	const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+	const [isJarvisOpen, setIsJarvisOpen] = React.useState(false);
 
 	const originalAlwaysOnTop = window.electron.browserWindow.getAlwaysOnTop();
 	const [isAlwaysOnTop, setisAlwaysOnTop] = React.useState(originalAlwaysOnTop);
@@ -207,6 +209,19 @@ export default function Layout() {
 	return (
 		<div id="windowRef" className="flex flex-col" ref={windowRef}>
 			<TitleBar {...{ isAlwaysOnTop, toggleIsAlwaysOnTop }} />
+			<div className="flex items-center justify-between border-b border-gray-800 bg-gray-950 px-3 py-2 text-white">
+				<div className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan-400">
+					GodMode Command Center
+				</div>
+				<button
+					type="button"
+					className="rounded-lg border border-cyan-700 bg-slate-900 px-4 py-2 text-xs font-semibold tracking-wider text-cyan-200 transition hover:bg-cyan-950"
+					onClick={() => setIsJarvisOpen(true)}
+				>
+					OPEN JARVIS CORE
+				</button>
+			</div>
+			<JarvisPanel open={isJarvisOpen} onClose={() => setIsJarvisOpen(false)} />
 			<SettingsMenu
 				open={isSettingsOpen}
 				onClose={() => setIsSettingsOpen(false)}
